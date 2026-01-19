@@ -32,9 +32,6 @@ windows = { version = "0.54", features = [
     "Win32_System_Threading",
 ] }
 
-[target.'cfg(target_os = "macos")'.dependencies]
-objc = "0.2"
-
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]

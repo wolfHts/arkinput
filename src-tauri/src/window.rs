@@ -69,45 +69,38 @@ pub fn get_active_window() -> Option<WindowInfo> {
 
 #[cfg(target_os = "macos")]
 pub fn get_active_window() -> Option<WindowInfo> {
-    use objc::runtime::Class;
-    use objc::{msg_send, sel, sel_impl};
+    use std::process::Command;
 
-    unsafe {
-        // Get NSWorkspace class and shared instance
-        let ns_workspace_class = Class::get("NSWorkspace")?;
-        let workspace: *mut objc::runtime::Object = msg_send![ns_workspace_class, sharedWorkspace];
+    // Use AppleScript to get the frontmost application name
+    // This is more reliable than using objc bindings directly
+    let output = Command::new("osascript")
+        .arg("-e")
+        .arg("tell application \"System Events\" to get name of first application process whose frontmost is true")
+        .output()
+        .ok()?;
 
-        if workspace.is_null() {
-            return None;
-        }
-
-        // Get frontmost application
-        let front_app: *mut objc::runtime::Object = msg_send![workspace, frontmostApplication];
-
-        if front_app.is_null() {
-            return None;
-        }
-
-        // Get localized name
-        let app_name_ns: *mut objc::runtime::Object = msg_send![front_app, localizedName];
-        let app_name = if !app_name_ns.is_null() {
-            let c_str: *const i8 = msg_send![app_name_ns, UTF8String];
-            if !c_str.is_null() {
-                std::ffi::CStr::from_ptr(c_str)
-                    .to_string_lossy()
-                    .to_string()
-            } else {
-                "Unknown".to_string()
-            }
-        } else {
-            "Unknown".to_string()
-        };
-
-        Some(WindowInfo {
-            app_name,
+    if !output.status.success() {
+        return Some(WindowInfo {
+            app_name: "Unknown".to_string(),
             window_title: None,
-        })
+        });
     }
+
+    let app_name = String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .to_string();
+
+    if app_name.is_empty() {
+        return Some(WindowInfo {
+            app_name: "Unknown".to_string(),
+            window_title: None,
+        });
+    }
+
+    Some(WindowInfo {
+        app_name,
+        window_title: None,
+    })
 }
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
