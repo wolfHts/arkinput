@@ -69,28 +69,28 @@ pub fn get_active_window() -> Option<WindowInfo> {
 
 #[cfg(target_os = "macos")]
 pub fn get_active_window() -> Option<WindowInfo> {
-    use cocoa::base::{id, nil, class};
+    use objc::runtime::Class;
     use objc::{msg_send, sel, sel_impl};
 
     unsafe {
-        // Get shared NSWorkspace
-        let ns_workspace: id = class!(NSWorkspace);
-        let workspace: id = msg_send![ns_workspace, sharedWorkspace];
+        // Get NSWorkspace class and shared instance
+        let ns_workspace_class = Class::get("NSWorkspace")?;
+        let workspace: *mut objc::runtime::Object = msg_send![ns_workspace_class, sharedWorkspace];
 
-        if workspace == nil {
+        if workspace.is_null() {
             return None;
         }
 
         // Get frontmost application
-        let front_app: id = msg_send![workspace, frontmostApplication];
+        let front_app: *mut objc::runtime::Object = msg_send![workspace, frontmostApplication];
 
-        if front_app == nil {
+        if front_app.is_null() {
             return None;
         }
 
         // Get localized name
-        let app_name_ns: id = msg_send![front_app, localizedName];
-        let app_name = if app_name_ns != nil {
+        let app_name_ns: *mut objc::runtime::Object = msg_send![front_app, localizedName];
+        let app_name = if !app_name_ns.is_null() {
             let c_str: *const i8 = msg_send![app_name_ns, UTF8String];
             if !c_str.is_null() {
                 std::ffi::CStr::from_ptr(c_str)
