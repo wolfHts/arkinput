@@ -109,17 +109,30 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
             // Initialize database
-            let app_dir = app.path().app_data_dir().expect("Failed to get app data dir");
-            std::fs::create_dir_all(&app_dir).expect("Failed to create app data dir");
+            let app_dir = match app.path().app_data_dir() {
+                Ok(dir) => dir,
+                Err(e) => {
+                    eprintln!("Failed to get app data dir: {}", e);
+                    return Err(e.into());
+                }
+            };
+
+            if let Err(e) = std::fs::create_dir_all(&app_dir) {
+                eprintln!("Failed to create app data dir: {}", e);
+                return Err(e.into());
+            }
+
             let db_path: PathBuf = app_dir.join("arkinput.db");
 
-            let db = Arc::new(
-                Database::new(db_path).expect("Failed to initialize database")
-            );
+            let db = match Database::new(db_path) {
+                Ok(db) => Arc::new(db),
+                Err(e) => {
+                    eprintln!("Failed to initialize database: {}", e);
+                    return Err(e.to_string().into());
+                }
+            };
 
-            if DATABASE.set(db.clone()).is_err() {
-                panic!("Failed to set database");
-            }
+            let _ = DATABASE.set(db.clone());
 
             // Initialize keyboard listener with database
             keyboard::init_database(db);
@@ -129,7 +142,8 @@ pub fn run() {
                 keyboard::set_excluded_apps(settings.excluded_apps);
             }
 
-            // Start keyboard listener
+            // Start keyboard listener (runs in background thread)
+            // Note: On macOS, this requires Accessibility permission
             keyboard::start_keyboard_listener();
 
             Ok(())
