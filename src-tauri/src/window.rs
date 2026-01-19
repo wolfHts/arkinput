@@ -69,18 +69,26 @@ pub fn get_active_window() -> Option<WindowInfo> {
 
 #[cfg(target_os = "macos")]
 pub fn get_active_window() -> Option<WindowInfo> {
-    use cocoa::appkit::NSWorkspace;
-    use cocoa::base::{id, nil};
+    use cocoa::base::{id, nil, class};
     use objc::{msg_send, sel, sel_impl};
 
     unsafe {
-        let workspace: id = NSWorkspace::sharedWorkspace(nil);
+        // Get shared NSWorkspace
+        let ns_workspace: id = class!(NSWorkspace);
+        let workspace: id = msg_send![ns_workspace, sharedWorkspace];
+
+        if workspace == nil {
+            return None;
+        }
+
+        // Get frontmost application
         let front_app: id = msg_send![workspace, frontmostApplication];
 
         if front_app == nil {
             return None;
         }
 
+        // Get localized name
         let app_name_ns: id = msg_send![front_app, localizedName];
         let app_name = if app_name_ns != nil {
             let c_str: *const i8 = msg_send![app_name_ns, UTF8String];
@@ -95,8 +103,6 @@ pub fn get_active_window() -> Option<WindowInfo> {
             "Unknown".to_string()
         };
 
-        // macOS doesn't easily provide window title for other apps
-        // Would need Accessibility APIs which require permissions
         Some(WindowInfo {
             app_name,
             window_title: None,
