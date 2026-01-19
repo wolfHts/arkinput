@@ -142,9 +142,12 @@ pub fn run() {
                 keyboard::set_excluded_apps(settings.excluded_apps);
             }
 
-            // Start keyboard listener (runs in background thread)
-            // Note: On macOS, this requires Accessibility permission
-            keyboard::start_keyboard_listener();
+            // Keyboard listener is disabled for now - enable after testing
+            // TODO: Re-enable after fixing macOS compatibility
+            // std::thread::spawn(|| {
+            //     std::thread::sleep(std::time::Duration::from_secs(1));
+            //     keyboard::start_keyboard_listener();
+            // });
 
             Ok(())
         })
