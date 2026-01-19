@@ -117,7 +117,9 @@ pub fn run() {
                 Database::new(db_path).expect("Failed to initialize database")
             );
 
-            DATABASE.set(db.clone()).expect("Failed to set database");
+            if DATABASE.set(db.clone()).is_err() {
+                panic!("Failed to set database");
+            }
 
             // Initialize keyboard listener with database
             keyboard::init_database(db);

@@ -71,7 +71,6 @@ pub fn get_active_window() -> Option<WindowInfo> {
 pub fn get_active_window() -> Option<WindowInfo> {
     use cocoa::appkit::NSWorkspace;
     use cocoa::base::{id, nil};
-    use cocoa::foundation::NSString;
     use objc::{msg_send, sel, sel_impl};
 
     unsafe {
